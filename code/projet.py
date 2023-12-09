@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.random import normal, randn
+from scipy.signal import argrelextrema
 import os
 
 if not os.path.exists('plots'):
@@ -9,7 +10,7 @@ if not os.path.exists('plots'):
     print(f"The folder '{'plots'}' has been created.")
 else:
     print(f"The folder '{'plots'}' already exists.")
-# %%
+
 # -- Define all constants 
 H  = 4500           # [m]
 S0 = 35             # [psu]
@@ -31,7 +32,7 @@ theta = 20          # [°C]
 F = 3.24  # [m year^-1]
 
 # array of values of Delta S to to compute d Delta S / dt
-DeltaS_val = np.arange(0, 6, 0.1)
+DeltaS_val = np.arange(0, 6, 0.01)
 
 # compute using the right-hand side of the equation
 DS = (F*S0/H) - (DeltaS_val/tho_d) - (q*DeltaS_val*(alpha_s*DeltaS_val - alpha_t*theta)**2)/V
@@ -46,15 +47,27 @@ plt.savefig('./plots/bistability_F324.png', dpi=500, bbox_inches='tight')
 plt.savefig('./plots/bistability_F324.pdf' , bbox_inches='tight')
 plt.show()
 
-pot = - np.cumsum(DS)*0.1
+# Compute and pot the potential
+pot = - np.cumsum(DS)*(DeltaS_val[1]-DeltaS_val[0])
+
+# Find extremas
+min_idx = argrelextrema(pot, np.less)
+max_idx = argrelextrema(pot, np.greater)
+ext_idx = np.concatenate((min_idx, max_idx), axis=1)
+extremas_y = pot[ext_idx]
+extremas_x = DeltaS_val[ext_idx]
+
 plt.figure()
 plt.ylabel('V  $[psu^2/years]$')
 plt.xlabel('$ \Delta S$  [psu]')
 plt.plot(DeltaS_val, pot)
+plt.scatter(extremas_x, extremas_y, c='k')
 plt.grid(linestyle = ':')
 plt.savefig('./plots/potential_F324.png', dpi=500, bbox_inches='tight')
 plt.savefig('./plots/potential_F324.pdf' , bbox_inches='tight')
 plt.show()
+
+print('Extremas of potential : ' + str(extremas_x))
 
 # %%
 # -- 1.2 : Cessi proposes F=2.3 m year-1. Is the system bistable in this case?
@@ -93,7 +106,7 @@ while (flag):
     F += 0.0001
 print("for F = {}, we cross 0 : {} times".format(round(F,10), Number))
 
-# plot for threshold value
+# Plot for threshold value
 threshold_DS = (F*S0/H) - (DeltaS_val/tho_d) - (q*DeltaS_val*(alpha_s*DeltaS_val - alpha_t*theta)**2)/V
 
 plt.figure()
@@ -106,6 +119,29 @@ plt.grid(linestyle=':')
 plt.savefig('./plots/Fthreshold.png', dpi=500, bbox_inches='tight')
 plt.savefig('./plots/Fthreshold.pdf', bbox_inches='tight')
 plt.show()
+
+# Compute and plot the potential for threshold value
+pot_thr = - np.cumsum(threshold_DS)*(DeltaS_val[1]-DeltaS_val[0])
+
+# Find extremas
+min_idx = argrelextrema(pot_thr, np.less)
+max_idx = argrelextrema(pot_thr, np.greater)
+ext_idx = np.concatenate((min_idx, max_idx), axis=1)
+extremas_y_thrpot = pot_thr[ext_idx]
+extremas_x_thrpot = DeltaS_val[ext_idx]
+
+plt.figure()
+plt.ylabel('V  $[psu^2/years]$')
+plt.xlabel('$ \Delta S$  [psu]')
+plt.plot(DeltaS_val, pot_thr)
+plt.scatter(extremas_x_thrpot, extremas_y_thrpot, c='k')
+plt.grid(linestyle = ':')
+plt.savefig('./plots/potential_Fthreshold.png', dpi=500, bbox_inches='tight')
+plt.savefig('./plots/potential_Fthreshold.pdf' , bbox_inches='tight')
+plt.show()
+
+print('Extremas of threshold potential : ' + str(extremas_x_thrpot))
+
 
 # %%
 # -- 1.3 Write a code to integrate in time the equation and show plots of 
@@ -123,7 +159,7 @@ Fthr = 2.5649
 
 # Initialize figure
 colors2 = plt.cm.plasma(np.linspace(0,0.9,len(init_vals)))
-fig, axs = plt.subplots(1,3, figsize=(18, 5), sharey=True)
+fig, axs = plt.subplots(1,3, figsize=(12, 5), sharey=True)
 
 # -- Try with one stable solution : Flow
 int_DS = np.zeros((T, len(init_vals)))
@@ -167,7 +203,7 @@ axs[0].text(0.97, 0.93, '(a)', transform=axs[0].transAxes, fontweight='bold', fo
 axs[1].text(0.97, 0.93, '(b)', transform=axs[1].transAxes, fontweight='bold', fontsize=12, ha='right')
 axs[2].text(0.97, 0.93, '(c)', transform=axs[2].transAxes, fontweight='bold', fontsize=12, ha='right')
 
-fig.legend([str(round(init,3)) for init in init_vals], bbox_to_anchor=(1.04, 0.75))
+fig.legend([str(round(init,3)) for init in init_vals], bbox_to_anchor=(1.06, 0.8))
 plt.tight_layout()
 plt.savefig('./plots/timeseries.png', dpi=500, bbox_inches='tight')
 plt.savefig('./plots/timeseries.pdf', bbox_inches='tight')
@@ -189,7 +225,7 @@ dt  = 1
 DS0 = 3      # à tester aussi
 init_vals = np.arange(0, 6, 0.5)
 
-F = 3.4 # 2.3 # à tester aussi
+F = 3.25 # 2.3 # à tester aussi
 
 DS_sto    = np.zeros(T)
 DS_sto[0] = DS0
