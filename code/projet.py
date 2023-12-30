@@ -72,7 +72,7 @@ print('Extremas of potential : ' + str(extremas_x))
 # %%
 # -- 1.2 : Cessi proposes F=2.3 m year-1. Is the system bistable in this case?
 # Estimate numerically the critical value of F at which the system changes the number of stable solutions
-Fvals = np.arange(2.3, 3.5, 0.1)
+Fvals = np.arange(2.3, 3.3, 0.1)
 all_DS = np.zeros((len(DeltaS_val), len(Fvals)))
 
 for i in range(len(Fvals)):
@@ -223,9 +223,7 @@ plt.show()
 T   = 100000 # obligé d'être super long pour voir les jumps entre équilibres
 dt  = 1
 DS0 = 3      # à tester aussi
-init_vals = np.arange(0, 6, 0.5)
-
-F = 3.25 # 2.3 # à tester aussi
+F =  3.25 # 2.3 # à tester aussi
 
 DS_sto    = np.zeros(T)
 DS_sto[0] = DS0
@@ -237,7 +235,182 @@ for i in range(1,T):
 
 f = plt.figure()
 plt.xlabel('Time [years]')
-plt.ylabel('$\Delta S$')
+plt.ylabel('$\Delta S$ [psu]')
 plt.plot(DS_sto)
+plt.savefig('./plots/stochastic_timeseries.png', dpi=500, bbox_inches='tight')
+plt.savefig('./plots/stochastic_timeseries.pdf', bbox_inches='tight')
 plt.show()
 # %%
+# --- Compute ensemble statistics for F=3.25 and sigma = 3F
+T    = 100000 # obligé d'être super long pour voir les jumps entre équilibres
+Nens = 100
+dt   = 1
+DS0  = 3      # à tester aussi
+F    =  3.25 # 2.3 # à tester aussi
+
+DS_sto_ens = np.zeros((T, Nens))
+DS_sto_ens[0,:] = DS0
+
+for n in range(Nens):
+    for i in range(1,T):
+        sigmaF = 3*F*np.sqrt(dt) # tester différentes val aussi 
+        rhs = (S0*F/H) - (DS_sto_ens[i-1,n]/tho_d) - (q*DS_sto_ens[i-1,n]*(alpha_s*DS_sto_ens[i-1,n] - alpha_t*theta)**2)/V 
+        DS_sto_ens[i,n] = DS_sto_ens[i-1,n] + rhs*dt + (sigmaF*randn()*S0/H)
+# %%
+plt.figure()
+plt.xlabel('$\Delta S$ [psu]')
+plt.ylabel('Counts')
+plt.hist(DS_sto_ens.ravel(), bins=150)
+plt.savefig('./plots/sto_base_ensemble_hist.png', dpi=500, bbox_inches='tight')
+plt.savefig('./plots/sto_base_ensemble_hist.pdf', bbox_inches='tight')
+plt.show()
+
+# %%
+# --- For F=3.25, test various stochastic forcings
+T    = 100000 # obligé d'être super long pour voir les jumps entre équilibres
+Nens = 100
+dt   = 1
+DS0  = 3      
+F    =  3.25 
+
+DS_sto_ens15 = np.zeros((T, Nens))
+DS_sto_ens15[0,:] = DS0
+for n in range(Nens):
+    for i in range(1,T):
+        sigmaF = 1.5*F*np.sqrt(dt) 
+        rhs = (S0*F/H) - (DS_sto_ens15[i-1,n]/tho_d) - (q*DS_sto_ens15[i-1,n]*(alpha_s*DS_sto_ens15[i-1,n] - alpha_t*theta)**2)/V 
+        DS_sto_ens15[i,n] = DS_sto_ens15[i-1,n] + rhs*dt + (sigmaF*randn()*S0/H)
+
+#----------------------#
+DS_sto_ens2 = np.zeros((T, Nens))
+DS_sto_ens2[0,:] = DS0
+for n in range(Nens):
+    for i in range(1,T):
+        sigmaF = 2*F*np.sqrt(dt) 
+        rhs = (S0*F/H) - (DS_sto_ens2[i-1,n]/tho_d) - (q*DS_sto_ens2[i-1,n]*(alpha_s*DS_sto_ens2[i-1,n] - alpha_t*theta)**2)/V 
+        DS_sto_ens2[i,n] = DS_sto_ens2[i-1,n] + rhs*dt + (sigmaF*randn()*S0/H)
+
+#----------------------#
+DS_sto_ens25 = np.zeros((T, Nens))
+DS_sto_ens25[0,:] = DS0
+for n in range(Nens):
+    for i in range(1,T):
+        sigmaF = 2.5*F*np.sqrt(dt) 
+        rhs = (S0*F/H) - (DS_sto_ens25[i-1,n]/tho_d) - (q*DS_sto_ens25[i-1,n]*(alpha_s*DS_sto_ens25[i-1,n] - alpha_t*theta)**2)/V 
+        DS_sto_ens25[i,n] = DS_sto_ens25[i-1,n] + rhs*dt + (sigmaF*randn()*S0/H)
+plt.show()
+
+
+# %%
+# --- Subplot for report
+from matplotlib.ticker import ScalarFormatter
+
+fig, axs = plt.subplots(3,2, sharex='col', figsize=(8,7))
+axs[0,0].plot(DS_sto_ens15[:,0]) ; axs[0,0].set_ylim([-0.2,6.4]) ; axs[0,0].set_ylabel('$\Delta S$ [psu]')
+axs[1,0].plot(DS_sto_ens2 [:,2], color='orange') ; axs[1,0].set_ylim([-0.2,6.4]) ; axs[1,0].set_ylabel('$\Delta S$ [psu]')
+axs[2,0].plot(DS_sto_ens25[:,0], color='green') ; axs[2,0].set_ylim([-0.2,6.4]) ; axs[2,0].set_xlabel('Time [years]') ; axs[2,0].set_ylabel('$\Delta S$ [psu]')
+
+axs[0,1].hist(DS_sto_ens15.ravel(), bins=150)
+axs[1,1].hist(DS_sto_ens2 .ravel(), bins=150, color='orange')
+axs[2,1].hist(DS_sto_ens25.ravel(), bins=150, color='green') ; axs[2,1].set_xlabel('$\Delta S$ [psu]')
+
+for ax in axs[:, 1]:
+    ax.yaxis.get_major_formatter().set_powerlimits((0, 1))
+
+plt.tight_layout()
+# plt.savefig('./plots/sto_forcing_sensitivity.png', dpi=500, bbox_inches='tight')
+# plt.savefig('./plots/sto_forcing_sensitivity.pdf', bbox_inches='tight')
+plt.show()
+
+# %%
+# --- For the same stochastic forcing, change the value of F
+T    = 100000 # obligé d'être super long pour voir les jumps entre équilibres
+Nens = 100
+dt   = 1
+DS0  = 3  
+    
+F = 2.3
+# stochasic solutions
+DS_ens_F23 = np.zeros((T, Nens))
+DS_ens_F23[0,:] = DS0
+for n in range(Nens):
+    for i in range(1,T):
+        sigmaF = 3*F*np.sqrt(dt) 
+        rhs = (S0*F/H) - (DS_ens_F23[i-1,n]/tho_d) - (q*DS_ens_F23[i-1,n]*(alpha_s*DS_ens_F23[i-1,n] - alpha_t*theta)**2)/V 
+        DS_ens_F23[i,n] = DS_ens_F23[i-1,n] + rhs*dt + (sigmaF*randn()*S0/H)
+# deterministic solution
+# DS_det_F23 = np.zeros(T)
+# DS_det_F23[0] = DS0
+# for i in range(1,T): 
+#     rhs = (S0*F/H) - (DS_det_F23[i-1]/tho_d) - (q*DS_det_F23[i-1]*(alpha_s*DS_det_F23[i-1] - alpha_t*theta)**2)/V 
+#     DS_det_F23[i] = DS_det_F23[i-1] + rhs*dt
+#--------------------------------------------#
+F = 2.65
+# stochasic solutions
+DS_ens_Fc = np.zeros((T, Nens))
+DS_ens_Fc[0,:] = DS0
+for n in range(Nens):
+    for i in range(1,T):
+        sigmaF = 3*F*np.sqrt(dt) 
+        rhs = (S0*F/H) - (DS_ens_Fc[i-1,n]/tho_d) - (q*DS_ens_Fc[i-1,n]*(alpha_s*DS_ens_Fc[i-1,n] - alpha_t*theta)**2)/V 
+        DS_ens_Fc[i,n] = DS_ens_Fc[i-1,n] + rhs*dt + (sigmaF*randn()*S0/H)
+# deterministic solution
+# DS_det_Fc = np.zeros(T)
+# DS_det_Fc[0] = DS0
+# for i in range(1,T): 
+#     rhs = (S0*F/H) - (DS_det_Fc[i-1]/tho_d) - (q*DS_det_Fc[i-1]*(alpha_s*DS_det_Fc[i-1] - alpha_t*theta)**2)/V 
+#     DS_det_Fc[i] = DS_det_Fc[i-1] + rhs*dt
+#--------------------------------------------#
+F = 2.9
+# stochasic solutions
+DS_ens_F29 = np.zeros((T, Nens))
+DS_ens_F29[0,:] = DS0
+for n in range(Nens):
+    for i in range(1,T):
+        sigmaF = 3*F*np.sqrt(dt) 
+        rhs = (S0*F/H) - (DS_ens_F29[i-1,n]/tho_d) - (q*DS_ens_F29[i-1,n]*(alpha_s*DS_ens_F29[i-1,n] - alpha_t*theta)**2)/V 
+        DS_ens_F29[i,n] = DS_ens_F29[i-1,n] + rhs*dt + (sigmaF*randn()*S0/H)
+# deterministic solution
+# DS_det_F29 = np.zeros(T)
+# DS_det_F29[0] = DS0
+# for i in range(1,T): 
+#     rhs = (S0*F/H) - (DS_det_F29[i-1]/tho_d) - (q*DS_det_F29[i-1]*(alpha_s*DS_det_F29[i-1] - alpha_t*theta)**2)/V 
+#     DS_det_F29[i] = DS_det_F29[i-1] + rhs*dt
+
+# %%
+meanF23 = np.average(DS_ens_F23, axis=1)
+meanFc  = np.average(DS_ens_Fc, axis=1)
+meanF29 = np.average(DS_ens_F29, axis=1)
+
+fig, axs = plt.subplots(3,2, figsize=(12,7.5), sharex='col')
+axs[0,0].plot(DS_ens_F23, 'tab:blue', alpha=.33, lw=.5) ; axs[0,0].set_ylabel('$\Delta S$ [psu]')
+# axs[0,0].plot(DS_det_F23, 'k')
+axs[0,0].plot(meanF23, 'r')
+axs[0,1].hist(DS_ens_F23.ravel(), bins=100, color='tab:blue')
+
+axs[1,0].plot(DS_ens_Fc, color='orange', alpha=.33, lw=.5) ;  axs[1,0].set_ylabel('$\Delta S$ [psu]')
+# axs[1,0].plot(DS_det_Fc, 'k')
+axs[1,0].plot(meanFc, 'r')
+axs[1,1].hist(DS_ens_Fc.ravel(), bins=100, color='orange')
+
+axs[2,0].plot(DS_ens_F29, 'g', alpha=.33, lw=.5) ; axs[2,0].set_ylabel('$\Delta S$ [psu]')
+# axs[2,0].plot(DS_det_F29, 'k')
+axs[2,0].plot(meanF29, 'r')
+axs[2,1].hist(DS_ens_F29.ravel(), bins=100, color='green')
+
+axs[2,0].set_xlabel('Time [years]')
+axs[2,1].set_xlabel('$\Delta S$ [psu]')
+
+axs[0,0].set_ylim(-0.5, 6.5)
+axs[1,0].set_ylim(-0.5, 6.5)
+axs[2,0].set_ylim(-0.5, 6.5)
+
+for ax in axs[:, 1]:
+    ax.yaxis.get_major_formatter().set_powerlimits((0, 1))
+    
+plt.tight_layout()
+# plt.savefig('./plots/sto_Fvals.png', dpi=500, bbox_inches='tight')
+plt.savefig('./plots/sto_Fvals.svg', bbox_inches='tight')
+plt.show()
+# %%
+
